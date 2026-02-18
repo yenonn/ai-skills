@@ -1,6 +1,6 @@
 ---
 name: agent-team-orchestrator
-description: Coordinates a three-agent team consisting of an Architect, PR Reviewer, and Coder for software development workflows. Use when you need architectural planning, code review expertise, and implementation coordination. Triggers when user requests team-based development approach with role specialization, architectural decisions, PR review processes, or coordinated coding tasks.
+description: Coordinates a multi-agent team consisting of an Architect, PR Reviewer, Coder, and Debug Agent for software development workflows. Use when you need architectural planning, code review expertise, implementation coordination, or bug investigation. Triggers when user requests team-based development approach with role specialization, architectural decisions, PR review processes, debugging workflows, or coordinated coding tasks.
 ---
 
 # Agent Team Orchestrator
@@ -34,6 +34,15 @@ Coordinates a multi-agent team for comprehensive software development workflows 
 - Security vulnerability assessment
 - Performance and scalability review
 
+### Debug Agent
+- Investigates and diagnoses bugs and issues
+- Analyzes error logs, stack traces, and reproduction steps
+- Identifies root causes using systematic debugging approaches
+- Proposes targeted fixes with minimal code changes
+- Verifies fixes resolve the issue without regressions
+- Documents bug causes and prevention strategies
+- Collaborates with Coder on complex fixes
+
 ### QA/Tester Agent (Optional)
 - Creates comprehensive test strategies
 - Validates edge cases and error handling
@@ -50,6 +59,10 @@ Coordinates a multi-agent team for comprehensive software development workflows 
         (Architect)   (Architect)   (Coder)        (Reviewer)    (QA)
                           ↓              ↓               ↓
                        [ITERATION] ← ← ← ← ← ← ← ← ← ← ←
+
+[NEW] → [DEBUGGING] → [IMPLEMENTING] → [REVIEWING] → [COMPLETE]
+           ↓              ↓               ↓
+        (Debug)        (Coder)        (Reviewer)
 ```
 
 ### Task States
@@ -57,6 +70,7 @@ Coordinates a multi-agent team for comprehensive software development workflows 
 - `analyzing`: Architect analyzing requirements
 - `planning`: Architecture and specifications being created
 - `implementing`: Coder implementing features
+- `debugging`: Debug Agent investigating issues
 - `reviewing`: PR Reviewer examining code
 - `testing`: QA validation in progress
 - `iteration`: Addressing feedback
@@ -95,6 +109,29 @@ Architect → Coder(Component A) → Reviewer(A)
             Coder(Component B) → Reviewer(B)
                   ↓
             Coder(Component C) → Reviewer(C)
+```
+
+**Pattern 3: Debug Flow**
+For bug fixes and issue resolution:
+```
+┌─────────────┐
+│    Debug    │ (Investigates & diagnoses)
+└──────┬──────┘
+       │ (passes root cause & fix strategy)
+       ▼
+┌─────────────┐
+│    Coder    │ (Implements targeted fix)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   Reviewer  │ (Validates fix)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│    Debug    │ (Verifies fix resolves issue)
+└─────────────┘
 ```
 
 ## Agent Delegation Prompts
@@ -270,6 +307,56 @@ If changes needed, list specific actionable items for iteration.
 - Sign-off recommendation
 ```
 
+### Debug Agent Prompt Template
+
+```
+# Debug Investigation Request
+
+**Task ID**: {task_id}
+**Debug Agent**: Debugger
+**State**: debugging
+
+## Issue Description
+{issue_description}
+
+## Reproduction Steps
+{reproduction_steps}
+
+## Available Context
+- Error logs: {error_logs}
+- Stack traces: {stack_traces}
+- Environment: {environment_info}
+- Recent changes: {recent_changes}
+
+## Debugging Requirements
+1. Reproduce and confirm the issue
+2. Identify root cause through systematic analysis
+3. Trace the bug through the code path
+4. Determine affected components and scope
+5. Propose minimal, targeted fix
+6. Identify potential side effects of fix
+7. Recommend prevention strategies
+
+## Debugging Methodology
+- [ ] Verify reproduction steps work
+- [ ] Analyze error messages and stack traces
+- [ ] Review recent code changes in affected areas
+- [ ] Check data flow and state mutations
+- [ ] Identify the exact line(s) causing the issue
+- [ ] Determine why the bug occurs (not just what)
+
+## Output Format
+Provide structured findings:
+- **Root Cause**: Clear explanation of why the bug occurs
+- **Affected Code**: Specific files and lines involved
+- **Proposed Fix**: Minimal changes to resolve the issue
+- **Verification Steps**: How to confirm the fix works
+- **Regression Risks**: Potential side effects to watch
+- **Prevention**: How to prevent similar bugs in the future
+
+After diagnosis, prepare handoff context for the Coder agent.
+```
+
 ## Coordination Instructions
 
 ### 1. Task Intake
@@ -291,6 +378,9 @@ Task(subagent_type="general", description="Feature Implementation", prompt=coder
 
 For review:
 Task(subagent_type="general", description="Code Review", prompt=reviewer_prompt)
+
+For debugging:
+Task(subagent_type="general", description="Bug Investigation", prompt=debug_prompt)
 ```
 
 ### 3. Context Preservation
@@ -300,9 +390,11 @@ Between agent handoffs, preserve:
 - Implementation details and patterns used
 - Review feedback and changes made
 - Test results and coverage data
+- Debug findings and root cause analysis
 
 ### 4. Quality Gates
 Before transitioning between states:
+- Debug → Coder: Root cause identified, fix strategy documented
 - Architect → Coder: Architecture must be approved
 - Coder → Reviewer: All tests passing, basic self-review done
 - Reviewer → Complete: No critical issues, all high-priority addressed
@@ -330,10 +422,21 @@ When review requires changes:
 ### Bug Fix Workflow
 ```
 1. Create task with reproduction steps
-2. Architect analyzes root cause
-3. Coder implements targeted fix
+2. Debug Agent investigates and identifies root cause
+3. Coder implements targeted fix based on diagnosis
 4. Reviewer validates fix approach
 5. QA confirms fix and no regressions
+```
+
+### Complex Bug Workflow
+```
+1. Create task with reproduction steps and context
+2. Debug Agent investigates root cause
+3. Architect reviews fix strategy (if architectural impact)
+4. Coder implements fix
+5. Reviewer validates fix
+6. Debug Agent verifies fix resolves issue
+7. QA confirms no regressions
 ```
 
 ### Refactoring Workflow
@@ -350,9 +453,10 @@ When review requires changes:
 | Task Type | Primary Agent | Support Agents | Parallel Safe |
 |-----------|---------------|----------------|---------------|
 | New Feature | Architect → Coder | Reviewer, QA | Partial |
-| Bug Fix | Coder | Reviewer | No |
+| Bug Fix | Debug → Coder | Reviewer | No |
+| Complex Bug | Debug → Architect → Coder | Reviewer | No |
 | Refactoring | Architect → Coder | Reviewer | Partial |
-| Performance | Architect → Coder | Reviewer, QA | No |
+| Performance | Debug → Architect → Coder | Reviewer, QA | No |
 | Security | Architect → Coder | Reviewer | No |
 | Documentation | Coder | Reviewer | Yes |
 
@@ -385,6 +489,8 @@ Track for continuous improvement:
 - Review pass rate
 - Test coverage trends
 - Blocker frequency
+- Debug accuracy rate (fixes that resolve issues on first attempt)
+- Average debug investigation time
 
 ## Best Practices
 
@@ -396,3 +502,5 @@ Track for continuous improvement:
 6. **Document Decisions**: Keep architectural decision records
 7. **Limit Iterations**: Set max iteration count to prevent loops
 8. **Escalate Early**: Don't hesitate to ask user for clarification
+9. **Debug Before Fixing**: Always investigate root cause before implementing fixes
+10. **Minimal Bug Fixes**: Prefer targeted fixes over broad refactoring for bugs
