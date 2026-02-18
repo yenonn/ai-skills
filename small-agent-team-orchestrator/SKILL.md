@@ -1,6 +1,6 @@
 ---
 name: agent-team-orchestrator
-description: Coordinates a multi-agent team consisting of an Architect, PR Reviewer, Coder, and Debug Agent for software development workflows. Use when you need architectural planning, code review expertise, implementation coordination, or bug investigation. Triggers when user requests team-based development approach with role specialization, architectural decisions, PR review processes, debugging workflows, or coordinated coding tasks.
+description: Coordinates a multi-agent team consisting of Architect, PR Reviewer, Coder, Debug Agent, Docs Agent, DevOps Agent, and Security Agent for software development workflows. Use when you need architectural planning, code review, implementation coordination, bug investigation, documentation, CI/CD setup, or security audits. Triggers when user requests team-based development with role specialization.
 ---
 
 # Agent Team Orchestrator
@@ -43,6 +43,33 @@ Coordinates a multi-agent team for comprehensive software development workflows 
 - Documents bug causes and prevention strategies
 - Collaborates with Coder on complex fixes
 
+### Docs Agent
+- Writes and maintains project documentation
+- Creates comprehensive README files and getting started guides
+- Documents APIs, endpoints, and data models
+- Writes tutorials and usage examples
+- Maintains changelogs and release notes
+- Ensures documentation stays in sync with code
+- Reviews documentation for clarity and completeness
+
+### DevOps Agent
+- Designs and implements CI/CD pipelines
+- Manages deployment configurations and strategies
+- Creates infrastructure as code (Terraform, CloudFormation, etc.)
+- Configures monitoring, logging, and alerting
+- Optimizes build processes and deployment speed
+- Manages environment configurations
+- Handles container orchestration (Docker, Kubernetes)
+
+### Security Agent
+- Performs security audits and vulnerability assessments
+- Reviews authentication and authorization implementations
+- Scans dependencies for known vulnerabilities
+- Identifies security anti-patterns and risks
+- Reviews data handling and encryption practices
+- Validates input sanitization and output encoding
+- Creates security reports with remediation steps
+
 ### QA/Tester Agent (Optional)
 - Creates comprehensive test strategies
 - Validates edge cases and error handling
@@ -63,6 +90,18 @@ Coordinates a multi-agent team for comprehensive software development workflows 
 [NEW] → [DEBUGGING] → [IMPLEMENTING] → [REVIEWING] → [COMPLETE]
            ↓              ↓               ↓
         (Debug)        (Coder)        (Reviewer)
+
+[NEW] → [DOCUMENTING] → [COMPLETE]
+           ↓
+        (Docs)
+
+[NEW] → [DEVOPS] → [COMPLETE]
+           ↓
+        (DevOps)
+
+[NEW] → [SECURITY_AUDIT] → [IMPLEMENTING] → [COMPLETE]
+           ↓                  ↓
+        (Security)          (Coder)
 ```
 
 ### Task States
@@ -73,6 +112,9 @@ Coordinates a multi-agent team for comprehensive software development workflows 
 - `debugging`: Debug Agent investigating issues
 - `reviewing`: PR Reviewer examining code
 - `testing`: QA validation in progress
+- `documenting`: Docs Agent writing documentation
+- `devops`: DevOps Agent configuring infrastructure
+- `security_audit`: Security Agent performing audit
 - `iteration`: Addressing feedback
 - `blocked`: Task has blockers
 - `complete`: Task finished and approved
@@ -131,6 +173,51 @@ For bug fixes and issue resolution:
        ▼
 ┌─────────────┐
 │    Debug    │ (Verifies fix resolves issue)
+└─────────────┘
+```
+
+**Pattern 4: Documentation Flow**
+For documentation tasks:
+```
+┌─────────────┐     ┌─────────────┐
+│    Coder    │ ──→ │    Docs     │
+│ (implements)│     │(documents)  │
+└─────────────┘     └─────────────┘
+
+Or standalone:
+┌─────────────┐
+│    Docs     │ (Reviews existing code, writes docs)
+└─────────────┘
+```
+
+**Pattern 5: Security Audit Flow**
+For security reviews:
+```
+┌─────────────┐
+│  Security   │ (Audits codebase)
+└──────┬──────┘
+       │ (findings with severity)
+       ▼
+┌─────────────┐
+│    Coder    │ (Fixes critical/high issues)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│  Security   │ (Verifies fixes)
+└─────────────┘
+```
+
+**Pattern 6: DevOps Flow**
+For infrastructure tasks:
+```
+┌─────────────┐
+│   DevOps    │ (Sets up CI/CD, deployment)
+└──────┬──────┘
+       │
+       ▼
+┌─────────────┐
+│   DevOps    │ (Verifies pipeline works)
 └─────────────┘
 ```
 
@@ -357,6 +444,136 @@ Provide structured findings:
 After diagnosis, prepare handoff context for the Coder agent.
 ```
 
+### Docs Agent Prompt Template
+
+```
+# Documentation Request
+
+**Task ID**: {task_id}
+**Docs Agent**: Documenter
+**State**: documenting
+
+## Documentation Scope
+{documentation_scope}
+
+## Available Context
+- Codebase summary: {codebase_summary}
+- Recent changes: {recent_changes}
+- Target audience: {target_audience}
+
+## Documentation Requirements
+1. Clear and concise writing
+2. Proper formatting (markdown, structure)
+3. Code examples with explanations
+4. Up-to-date with current implementation
+5. Covers all relevant features/APIs
+
+## Required Deliverables
+- [ ] README updates (if applicable)
+- [ ] API documentation
+- [ ] Usage examples and tutorials
+- [ ] Configuration documentation
+- [ ] Changelog entries
+
+## Quality Standards
+- [ ] Accurate and up-to-date
+- [ ] Clear for target audience
+- [ ] Includes practical examples
+- [ ] Properly formatted
+- [ ] Links to related docs
+
+## Output Format
+Provide structured documentation:
+- **Overview**: High-level summary
+- **Quick Start**: Getting started guide
+- **Detailed Docs**: Comprehensive reference
+- **Examples**: Code snippets and use cases
+- **Configuration**: All configurable options
+```
+
+### DevOps Agent Prompt Template
+
+```
+# DevOps/Infrastructure Request
+
+**Task ID**: {task_id}
+**DevOps Agent**: DevOps Engineer
+**State**: devops
+
+## Infrastructure Requirements
+{infrastructure_requirements}
+
+## Current State
+- Existing CI/CD: {existing_cicd}
+- Deployment target: {deployment_target}
+- Environments: {environments}
+
+## Deliverables Required
+1. CI/CD pipeline configuration
+2. Deployment scripts and configs
+3. Infrastructure as code (if needed)
+4. Monitoring and logging setup
+5. Environment configuration
+
+## DevOps Checklist
+- [ ] Pipeline builds successfully
+- [ ] Automated tests run in pipeline
+- [ ] Deployment strategy defined
+- [ ] Rollback plan documented
+- [ ] Monitoring configured
+- [ ] Secrets management handled
+- [ ] Environment parity verified
+
+## Output Format
+Provide complete DevOps setup:
+- **Pipeline Config**: CI/CD configuration files
+- **Deploy Strategy**: How deployments work
+- **Infrastructure**: IaC files or configs
+- **Monitoring**: Logs, metrics, alerts setup
+- **Runbooks**: Deployment and recovery procedures
+```
+
+### Security Agent Prompt Template
+
+```
+# Security Audit Request
+
+**Task ID**: {task_id}
+**Security Agent**: Security Analyst
+**State**: security_audit
+
+## Audit Scope
+{audit_scope}
+
+## Areas to Review
+- Authentication mechanisms
+- Authorization and access control
+- Input validation and sanitization
+- Data encryption (at rest and in transit)
+- Dependency vulnerabilities
+- API security
+- Secrets management
+
+## Security Checklist
+- [ ] Auth flows reviewed
+- [ ] Input validation verified
+- [ ] SQL injection prevention
+- [ ] XSS prevention
+- [ ] CSRF protection
+- [ ] Secrets not exposed
+- [ ] Dependencies scanned
+- [ ] HTTPS enforced
+- [ ] Rate limiting considered
+
+## Output Format
+Provide security assessment:
+- **CRITICAL**: Immediate security risks
+- **HIGH**: Significant vulnerabilities
+- **MEDIUM**: Security improvements needed
+- **LOW**: Best practice recommendations
+- **Remediation**: Specific fix instructions for each finding
+```
+
 ## Coordination Instructions
 
 ### 1. Task Intake
@@ -381,6 +598,15 @@ Task(subagent_type="general", description="Code Review", prompt=reviewer_prompt)
 
 For debugging:
 Task(subagent_type="general", description="Bug Investigation", prompt=debug_prompt)
+
+For documentation:
+Task(subagent_type="general", description="Documentation", prompt=docs_prompt)
+
+For DevOps/infrastructure:
+Task(subagent_type="general", description="DevOps Setup", prompt=devops_prompt)
+
+For security audit:
+Task(subagent_type="general", description="Security Audit", prompt=security_prompt)
 ```
 
 ### 3. Context Preservation
@@ -391,13 +617,17 @@ Between agent handoffs, preserve:
 - Review feedback and changes made
 - Test results and coverage data
 - Debug findings and root cause analysis
+- Security findings and remediation status
+- Documentation changes
 
 ### 4. Quality Gates
 Before transitioning between states:
 - Debug → Coder: Root cause identified, fix strategy documented
+- Security → Coder: Vulnerabilities prioritized, fix requirements clear
 - Architect → Coder: Architecture must be approved
 - Coder → Reviewer: All tests passing, basic self-review done
 - Reviewer → Complete: No critical issues, all high-priority addressed
+- Coder → Docs: Implementation complete, ready for documentation
 
 ### 5. Iteration Handling
 When review requires changes:
@@ -446,19 +676,49 @@ When review requires changes:
 3. Incremental implementation with tests
 4. Review each increment
 5. Full regression testing
+6. Docs Agent updates documentation
+```
+
+### Documentation Workflow
+```
+1. Docs Agent reviews codebase
+2. Identify documentation gaps
+3. Write/update documentation
+4. Coder reviews for accuracy
+5. Final approval
+```
+
+### Security Audit Workflow
+```
+1. Security Agent scans codebase
+2. Identify vulnerabilities by severity
+3. Coder addresses critical/high issues
+4. Security Agent verifies fixes
+5. Document security posture
+```
+
+### DevOps Setup Workflow
+```
+1. DevOps Agent analyzes deployment needs
+2. Design CI/CD pipeline
+3. Create infrastructure configs
+4. Test pipeline end-to-end
+5. Document deployment process
 ```
 
 ## Task Delegation Guidelines
 
 | Task Type | Primary Agent | Support Agents | Parallel Safe |
 |-----------|---------------|----------------|---------------|
-| New Feature | Architect → Coder | Reviewer, QA | Partial |
+| New Feature | Architect → Coder | Reviewer, QA, Docs | Partial |
 | Bug Fix | Debug → Coder | Reviewer | No |
 | Complex Bug | Debug → Architect → Coder | Reviewer | No |
-| Refactoring | Architect → Coder | Reviewer | Partial |
+| Refactoring | Architect → Coder | Reviewer, Docs | Partial |
 | Performance | Debug → Architect → Coder | Reviewer, QA | No |
-| Security | Architect → Coder | Reviewer | No |
-| Documentation | Coder | Reviewer | Yes |
+| Security | Security → Coder | Reviewer | No |
+| Documentation | Docs | Reviewer | Yes |
+| DevOps/CI-CD | DevOps | Reviewer | Partial |
+| Security Audit | Security | Coder (if fixes needed) | Yes |
 
 ## Error Recovery
 
@@ -491,6 +751,10 @@ Track for continuous improvement:
 - Blocker frequency
 - Debug accuracy rate (fixes that resolve issues on first attempt)
 - Average debug investigation time
+- Security vulnerability count by severity
+- Documentation freshness (time since last update)
+- Deployment success rate
+- Pipeline build times
 
 ## Best Practices
 
@@ -504,3 +768,6 @@ Track for continuous improvement:
 8. **Escalate Early**: Don't hesitate to ask user for clarification
 9. **Debug Before Fixing**: Always investigate root cause before implementing fixes
 10. **Minimal Bug Fixes**: Prefer targeted fixes over broad refactoring for bugs
+11. **Docs With Code**: Document features as they're implemented
+12. **Security First**: Run security audits on authentication/authorization changes
+13. **Automate DevOps**: Prefer automated pipelines over manual deployments
